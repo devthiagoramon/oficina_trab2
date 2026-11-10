@@ -1,0 +1,22 @@
+# --- Backend (API) ---
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.6
+
+# --- Frontend (interface de demonstração) ---
+streamlit>=1.32
+requests>=2.31
+
+# --- Dados e cálculo numérico ---
+# Apenas estruturas de dados / álgebra básica. TF-IDF, perfil do usuário,
+# similaridade do cosseno, Top-N e métricas são implementados à mão.
+numpy>=1.26
+pandas>=2.2
+
+# --- Gráficos (análise exploratória e resultados) ---
+matplotlib>=3.8
+
+# --- Testes ---
+pytest>=8.0
+
+# NÃO usar: scikit-learn, surprise, implicit, gensim, nltk/spacy (pipeline pronto)
