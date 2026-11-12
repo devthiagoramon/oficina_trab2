@@ -91,9 +91,20 @@ python scripts/run_evaluation.py
 
 - Divisão por usuário: interações mais recentes (ou leave-one-out) como teste; perfil construído **só com treino**.
 - Item relevante: jogo que o usuário **recomendou** (`is_recommended = True`). A preferência é binária, então o perfil usa peso +1 para recomendado e -1 para não recomendado (a confirmar com as horas jogadas como peso opcional).
-- Métricas: Precision@N, Recall@N, nDCG@N (N = 5 e 10) + cobertura/diversidade.
-- Baselines: aleatório e mais populares.
-- Semente aleatória fixa: _a definir_.
+- Métricas: Precision@N, Recall@N, nDCG@N, Hit Rate@N (N = 5 e 10) + cobertura do catálogo e diversidade intra-lista.
+- Baselines: aleatório e mais populares (mais avaliações positivas no treino).
+- Semente aleatória fixa: **42** (amostragem de usuários e baseline aleatório).
+- Código em `backend/app/evaluation/` (`split.py`, `metrics.py`, `baselines.py`, `evaluator.py`).
+
+Qualquer recomendador com o método `recomendar(user_id, vistos, n) -> lista de app_id` pode ser avaliado, onde `vistos` são os jogos que o usuário avaliou no treino (não podem ser recomendados). O script `scripts/run_evaluation.py` inclui o modelo de conteúdo automaticamente quando existir `backend/app/recommender/modelo.py` com a classe `RecomendadorConteudo(treino)`; se ela tiver `similaridade(a, b)`, a diversidade também é calculada.
+
+```powershell
+python scripts/run_evaluation.py                   # split temporal (20% mais recentes)
+python scripts/run_evaluation.py --split loo       # leave-one-out
+python scripts/run_evaluation.py --usuarios 2000   # amostra menor
+```
+
+Os resultados vão para `results/metricas_<split>.csv`, `.md` (para o relatório) e `.png` (gráfico).
 
 ## Vídeo de demonstração
 

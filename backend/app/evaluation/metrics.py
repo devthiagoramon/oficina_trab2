@@ -67,3 +67,22 @@ def cobertura_catalogo(todas_recomendacoes, tamanho_catalogo):
     for lista in todas_recomendacoes:
         distintos.update(lista)
     return len(distintos) / tamanho_catalogo
+
+
+def diversidade_intra_lista(recomendados, similaridade):
+    """Média de (1 - similaridade) entre todos os pares da lista.
+
+    `similaridade(a, b)` devolve um valor entre 0 e 1 (ex.: cosseno entre
+    os vetores TF-IDF dos dois jogos). Lista com 0 ou 1 item tem
+    diversidade 0, porque não há pares para comparar.
+    """
+    n = len(recomendados)
+    if n < 2:
+        return 0.0
+    total = 0.0
+    pares = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            total += 1 - similaridade(recomendados[i], recomendados[j])
+            pares += 1
+    return total / pares
