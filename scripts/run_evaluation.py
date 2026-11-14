@@ -13,6 +13,7 @@ Saída (pasta results/):
     metricas_<split>.csv   tabela completa
     metricas_<split>.md    mesma tabela pronta para colar no relatório
     metricas_<split>.png   gráfico de barras (se o matplotlib estiver instalado)
+    significancia_<split>.csv/.md   bootstrap pareado do conteúdo contra os baselines
 """
 
 import argparse
@@ -27,6 +28,7 @@ sys.path.insert(0, str(RAIZ))
 
 from backend.app.evaluation.baselines import RecomendadorAleatorio, RecomendadorPopulares  # noqa: E402
 from backend.app.evaluation.evaluator import comparar  # noqa: E402
+from backend.app.evaluation.significancia import comparar_pares  # noqa: E402
 from backend.app.evaluation.split import split_leave_one_out, split_temporal  # noqa: E402
 
 COLUNAS = ["user_id", "app_id", "date", "is_recommended", "hours"]
@@ -95,7 +97,7 @@ def montar_recomendadores(treino, seed, catalogo):
 
 
 def tabela_markdown(tabela):
-    colunas = ["modelo"] + list(tabela.columns)
+    colunas = [tabela.index.name or "modelo"] + list(tabela.columns)
     linhas = ["| " + " | ".join(colunas) + " |", "|" + " --- |" * len(colunas)]
     for modelo, valores in tabela.iterrows():
         celulas = [str(modelo)]
@@ -134,6 +136,8 @@ def main():
     parser.add_argument("--usuarios", type=int, default=500, help="tamanho da amostra de usuários")
     parser.add_argument("--ks", type=int, nargs="+", default=[5, 10])
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--bootstrap", type=int, default=10_000,
+                        help="reamostragens do teste de significância")
     args = parser.parse_args()
 
     df = carregar_interacoes(args)
@@ -151,7 +155,9 @@ def main():
     print(f"Treino: {len(treino)} linhas | Teste: {len(teste)} linhas")
 
     recomendadores, similaridade, tamanho_catalogo = montar_recomendadores(treino, args.seed, catalogo)
-    tabela = comparar(recomendadores, treino, teste, tuple(args.ks), tamanho_catalogo, similaridade)
+    por_usuario = {}
+    tabela = comparar(recomendadores, treino, teste, tuple(args.ks), tamanho_catalogo, similaridade,
+                      por_usuario)
 
     pasta = RAIZ / "results"
     pasta.mkdir(exist_ok=True)
@@ -160,9 +166,20 @@ def main():
     base.with_suffix(".md").write_text(tabela_markdown(tabela), encoding="utf-8")
     salvar_grafico(tabela, args.ks, base.with_suffix(".png"))
 
+    k = max(args.ks)
+    significancia = comparar_pares(
+        por_usuario, "Conteúdo (TF-IDF)", ["Populares", "Aleatório"],
+        [f"recall@{k}", f"ndcg@{k}", f"hit@{k}"], n_amostras=args.bootstrap, seed=args.seed)
+    base_sig = pasta / f"significancia_{args.split}"
+    significancia.to_csv(base_sig.with_suffix(".csv"), index=False)
+    base_sig.with_suffix(".md").write_text(
+        tabela_markdown(significancia.set_index("comparacao")), encoding="utf-8")
+
     with pd.option_context("display.float_format", "{:.4f}".format, "display.width", 200,
                            "display.max_columns", None):
         print(tabela)
+        print(f"\nBootstrap pareado ({args.bootstrap} reamostragens, IC 95%):")
+        print(significancia.to_string(index=False))
     print(f"\nResultados salvos em {pasta}")
 
 

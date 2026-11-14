@@ -23,7 +23,7 @@ from .split import itens_relevantes
 
 
 def avaliar(recomendador, treino, teste, ks=(5, 10), tamanho_catalogo=None,
-            similaridade=None):
+            similaridade=None, por_usuario=None):
     """Devolve um dicionário com a média de cada métrica em cada k.
 
     Só entram na média os usuários que têm pelo menos um jogo relevante
@@ -33,6 +33,8 @@ def avaliar(recomendador, treino, teste, ks=(5, 10), tamanho_catalogo=None,
         passado, usa os jogos que aparecem no treino ou no teste.
     similaridade: função opcional sim(app_a, app_b) -> float. Se vier,
         calcula também a diversidade intra-lista no maior k.
+    por_usuario: lista opcional; se vier, recebe um dicionário por usuário
+        com as métricas dele (usado no teste de significância).
     """
     relevantes_por_usuario = itens_relevantes(teste)
     vistos_por_usuario = treino.groupby("user_id")["app_id"].apply(set).to_dict()
@@ -50,6 +52,7 @@ def avaliar(recomendador, treino, teste, ks=(5, 10), tamanho_catalogo=None,
         vistos = vistos_por_usuario.get(user_id, set())
         recomendados = list(recomendador.recomendar(user_id, vistos, n_max))
         todas_listas.append(recomendados)
+        linha_usuario = {"user_id": user_id}
 
         for k in ks:
             valores = {
@@ -60,9 +63,13 @@ def avaliar(recomendador, treino, teste, ks=(5, 10), tamanho_catalogo=None,
             }
             for nome, valor in valores.items():
                 soma[nome] = soma.get(nome, 0.0) + valor
+            if por_usuario is not None:
+                linha_usuario.update(valores)
 
         if similaridade is not None:
             soma_diversidade += metrics.diversidade_intra_lista(recomendados, similaridade)
+        if por_usuario is not None:
+            por_usuario.append(linha_usuario)
 
     n_usuarios = len(relevantes_por_usuario)
     resultados = {nome: total / n_usuarios for nome, total in soma.items()} if n_usuarios else {}
@@ -76,16 +83,21 @@ def avaliar(recomendador, treino, teste, ks=(5, 10), tamanho_catalogo=None,
 
 
 def comparar(recomendadores, treino, teste, ks=(5, 10), tamanho_catalogo=None,
-             similaridade=None):
+             similaridade=None, por_usuario=None):
     """Avalia vários recomendadores e monta a tabela para o relatório.
 
     `recomendadores` é um dicionário nome -> recomendador.
     Cada linha da tabela é um modelo, cada coluna uma métrica.
+    por_usuario: dicionário opcional; se vier, recebe nome -> DataFrame
+        com as métricas de cada usuário (índice user_id).
     """
     linhas = []
     for nome, rec in recomendadores.items():
         print(f"Avaliando {nome}...")
-        linha = avaliar(rec, treino, teste, ks, tamanho_catalogo, similaridade)
+        detalhes = [] if por_usuario is not None else None
+        linha = avaliar(rec, treino, teste, ks, tamanho_catalogo, similaridade, detalhes)
+        if por_usuario is not None:
+            por_usuario[nome] = pd.DataFrame(detalhes).set_index("user_id")
         linha["modelo"] = nome
         linhas.append(linha)
 
