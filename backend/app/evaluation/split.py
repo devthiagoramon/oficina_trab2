@@ -48,7 +48,7 @@ def split_leave_one_out(df, min_interacoes=5):
             continue
 
         ultimo = positivos.index[-1]
-        treino_partes.append(historico.loc[: ultimo - 1])
+        treino_partes.append(historico[historico.index < ultimo])
         teste_partes.append(historico.loc[[ultimo]])
 
     treino = pd.concat(treino_partes, ignore_index=True)

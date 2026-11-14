@@ -1,7 +1,5 @@
 """Baselines para comparar com o modelo baseado em conteúdo.
 
-Se o nosso modelo não ganhar do "mais populares", tem algo errado.
-
 Os baselines seguem a mesma "assinatura" que o avaliador espera:
     recomendar(user_id, vistos, n) -> lista de app_id
 onde `vistos` é o conjunto de jogos que o usuário já avaliou no treino.

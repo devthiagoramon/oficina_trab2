@@ -58,14 +58,17 @@ def amostrar_do_bruto(caminho, n_usuarios, min_interacoes, seed):
 
 def carregar_interacoes(args):
     processado = RAIZ / "data" / "processed" / "interacoes.csv"
-    bruto = RAIZ / "data" / "raw" / "recommendations.csv"
+    brutos = [RAIZ / "data" / "raw" / "recommendations.csv",
+              RAIZ / "games_metadata" / "recommendations.csv",
+              RAIZ / "games.csv" / "recommendations.csv"]
+    bruto = next((c for c in brutos if c.exists()), None)
 
     if args.entrada:
         df = pd.read_csv(args.entrada)
     elif processado.exists():
         print(f"Usando amostra processada: {processado}")
         df = pd.read_csv(processado)
-    elif bruto.exists():
+    elif bruto is not None:
         df = amostrar_do_bruto(bruto, args.usuarios, args.min_interacoes, args.seed)
     else:
         sys.exit(
@@ -78,28 +81,17 @@ def carregar_interacoes(args):
     return df
 
 
-def montar_recomendadores(treino, seed):
-    catalogo = sorted(treino["app_id"].unique())
+def montar_recomendadores(treino, seed, catalogo):
+    from backend.app.recommender.modelo import RecomendadorConteudo
+
+    modelo = RecomendadorConteudo(treino, catalogo=catalogo)
+    ids = sorted(catalogo)
     recomendadores = {
-        "Aleatório": RecomendadorAleatorio(catalogo, seed=seed),
+        "Aleatório": RecomendadorAleatorio(ids, seed=seed),
         "Populares": RecomendadorPopulares(treino),
+        "Conteúdo (TF-IDF)": modelo,
     }
-    similaridade = None
-
-    # Modelo de conteúdo: entra automaticamente quando a pasta recommender/
-    # expuser a classe RecomendadorConteudo(treino) com o método
-    # recomendar(user_id, vistos, n). Se tiver também similaridade(a, b),
-    # a diversidade intra-lista é calculada.
-    try:
-        from backend.app.recommender.modelo import RecomendadorConteudo
-    except ImportError:
-        print("Modelo de conteúdo ainda não disponível; avaliando só os baselines.")
-    else:
-        modelo = RecomendadorConteudo(treino)
-        recomendadores["Conteúdo (TF-IDF)"] = modelo
-        similaridade = getattr(modelo, "similaridade", None)
-
-    return recomendadores, similaridade
+    return recomendadores, modelo.similaridade, len(ids)
 
 
 def tabela_markdown(tabela):
@@ -139,13 +131,18 @@ def main():
     parser.add_argument("--split", choices=["temporal", "loo"], default="temporal")
     parser.add_argument("--test-frac", type=float, default=0.2)
     parser.add_argument("--min-interacoes", type=int, default=5)
-    parser.add_argument("--usuarios", type=int, default=5000, help="tamanho da amostra de usuários")
+    parser.add_argument("--usuarios", type=int, default=500, help="tamanho da amostra de usuários")
     parser.add_argument("--ks", type=int, nargs="+", default=[5, 10])
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
     df = carregar_interacoes(args)
     print(f"{len(df)} avaliações, {df['user_id'].nunique()} usuários, {df['app_id'].nunique()} jogos")
+    from backend.app.recommender.catalogo import carregar_catalogo
+    catalogo = carregar_catalogo(8000, df["app_id"].unique())
+    df = df[df["app_id"].isin(catalogo)].reset_index(drop=True)
+    print(f"Após exigir metadados e remover extras: {len(df)} avaliações, "
+          f"{df['user_id'].nunique()} usuários, {len(catalogo)} jogos candidatos")
 
     if args.split == "temporal":
         treino, teste = split_temporal(df, args.test_frac, args.min_interacoes)
@@ -153,8 +150,7 @@ def main():
         treino, teste = split_leave_one_out(df, args.min_interacoes)
     print(f"Treino: {len(treino)} linhas | Teste: {len(teste)} linhas")
 
-    recomendadores, similaridade = montar_recomendadores(treino, args.seed)
-    tamanho_catalogo = df["app_id"].nunique()
+    recomendadores, similaridade, tamanho_catalogo = montar_recomendadores(treino, args.seed, catalogo)
     tabela = comparar(recomendadores, treino, teste, tuple(args.ks), tamanho_catalogo, similaridade)
 
     pasta = RAIZ / "results"
