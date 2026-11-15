@@ -16,7 +16,7 @@ O perfil e o ranking de popularidade usam apenas treino. Um jogo relevante é aq
 
 O modelo de conteúdo tem os maiores Recall@10 e nDCG@10 entre os três métodos (a vantagem sobre populares não é estatisticamente significativa; ver a seção seguinte) e recomenda uma parcela maior do catálogo que o de populares. Os números absolutos são baixos: com mais de oito mil candidatos e poucos jogos positivos futuros por usuário, o Top-10 raramente contém o jogo reservado. A diversidade do modelo é menor que a dos baselines porque itens parecidos tendem a aparecer juntos; isto é esperado numa filtragem baseada em conteúdo e mostra superespecialização.
 
-Os arquivos completos são [tabela CSV](../results/metricas_temporal.csv), [tabela Markdown](../results/metricas_temporal.md), [gráfico](../results/metricas_temporal.png) e [três exemplos qualitativos](../results/exemplos_qualitativos.md). Reproduza com `python scripts/prepare_data.py --usuarios 500`, `python scripts/run_evaluation.py` e `python scripts/qualitative_examples.py`.
+Os arquivos completos são [tabela CSV](../results/metricas_temporal.csv), [tabela Markdown](../results/metricas_temporal.md), [gráfico](../results/metricas_temporal.png) e [três exemplos qualitativos](../results/exemplos_qualitativos.md). Reproduza tudo com `python scripts/reproduzir.py`.
 
 ## Significância estatística
 
@@ -44,6 +44,19 @@ Para checar se a conclusão depende do split, repetimos a avaliação reservando
 | Conteúdo (TF-IDF) | 0,0029 | 0,0287 | 0,0198 | 0,0287 | 0,1370 | 0,6985 |
 
 A ordem dos modelos se repete: conteúdo > populares > aleatório em acerto, populares com cobertura quase nula e conteúdo com a menor diversidade. Os acertos são ainda mais raros (6 usuários do conteúdo contra 4 dos populares), então nenhuma diferença contra populares é significativa (nDCG@10: +0,0113, IC 95% [−0,0068; 0,0321], p = 0,24). Contra o aleatório, o nDCG@10 fica no limite (p = 0,050) e Recall/Hit@10 não atingem 5% (p = 0,073). Tabelas completas em [`metricas_loo.md`](../results/metricas_loo.md) e [`significancia_loo.md`](../results/significancia_loo.md).
+
+## Variante com atributos numéricos
+
+Testamos se preço e ano de lançamento ajudam. Os dois entram no vetor do jogo como dimensões extras, com valores ausentes imputados pela mediana, log no preço e z-score limitado a ±3 (detalhes no README). O peso dessas dimensões foi escolhido **sem usar o teste**: `scripts/escolher_peso.py` divide o treino do split temporal de novo, com o mesmo protocolo, em subtreino e validação (144 usuários avaliados), e compara pesos de 0 a 32. O maior nDCG@10 na validação ficou no peso 12 ([`results/escolha_peso.md`](../results/escolha_peso.md)).
+
+| Split | Modelo | R@10 | nDCG@10 | Hit@10 | Cobertura@10 | Diversidade@10 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Temporal | Conteúdo (TF-IDF) | 0,0358 | 0,0265 | 0,0541 | 0,1219 | 0,6992 |
+| Temporal | Conteúdo + preço/ano | 0,0241 | 0,0190 | 0,0432 | 0,1118 | 0,7469 |
+| Leave-one-out | Conteúdo (TF-IDF) | 0,0287 | 0,0198 | 0,0287 | 0,1370 | 0,6985 |
+| Leave-one-out | Conteúdo + preço/ano | 0,0191 | 0,0137 | 0,0191 | 0,1252 | 0,7443 |
+
+No teste, a variante **não confirmou** o ganho da validação: perde em acerto nos dois splits, embora a diferença não seja significativa (temporal, nDCG@10: −0,0075, IC 95% [−0,0167; 0,0000], p ≈ 0,05). Na validação, a vantagem do peso 12 correspondia a uns dois usuários a mais com acerto entre 144, ou seja, estava dentro do ruído. Em troca, a variante aumenta a diversidade intra-lista (0,70 → 0,75), porque preço e época puxam jogos de gêneros diferentes que têm perfil comercial parecido. Mantivemos o modelo original, só com texto e tags, como principal: ele já era o modelo do trabalho antes do experimento, e trocar com base no teste seria vazamento. A variante continua disponível na interface para demonstração.
 
 ## Leitura qualitativa
 

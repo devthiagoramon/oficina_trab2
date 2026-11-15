@@ -33,6 +33,7 @@ from backend.app.evaluation.split import split_leave_one_out, split_temporal  # 
 
 COLUNAS = ["user_id", "app_id", "date", "is_recommended", "hours"]
 TAMANHO_PEDACO = 2_000_000
+VARIANTE = "Conteúdo + preço/ano"
 
 
 def amostrar_do_bruto(caminho, n_usuarios, min_interacoes, seed):
@@ -84,7 +85,7 @@ def carregar_interacoes(args):
 
 
 def montar_recomendadores(treino, seed, catalogo):
-    from backend.app.recommender.modelo import RecomendadorConteudo
+    from backend.app.recommender.modelo import PESO_NUMERICO_VALIDADO, RecomendadorConteudo
 
     modelo = RecomendadorConteudo(treino, catalogo=catalogo)
     ids = sorted(catalogo)
@@ -92,7 +93,11 @@ def montar_recomendadores(treino, seed, catalogo):
         "Aleatório": RecomendadorAleatorio(ids, seed=seed),
         "Populares": RecomendadorPopulares(treino),
         "Conteúdo (TF-IDF)": modelo,
+        # Variante: mesmo modelo com preço e ano normalizados (peso da validação).
+        VARIANTE: RecomendadorConteudo(treino, catalogo=catalogo, peso_numerico=PESO_NUMERICO_VALIDADO),
     }
+    # A diversidade usa sempre a similaridade do modelo principal (só texto),
+    # para não depender do recomendador que está sendo medido.
     return recomendadores, modelo.similaridade, len(ids)
 
 
@@ -101,8 +106,12 @@ def tabela_markdown(tabela):
     linhas = ["| " + " | ".join(colunas) + " |", "|" + " --- |" * len(colunas)]
     for modelo, valores in tabela.iterrows():
         celulas = [str(modelo)]
-        for v in valores:
-            celulas.append(f"{v:.4f}" if isinstance(v, float) else str(v))
+        for coluna, v in valores.items():
+            inteiro = coluna == "usuarios_avaliados" or (isinstance(v, float) and coluna == "segundos")
+            if inteiro and isinstance(v, float):
+                celulas.append(f"{v:g}")
+            else:
+                celulas.append(f"{v:.4f}" if isinstance(v, float) else str(v))
         linhas.append("| " + " | ".join(celulas) + " |")
     return "\n".join(linhas) + "\n"
 
@@ -168,7 +177,7 @@ def main():
 
     k = max(args.ks)
     significancia = comparar_pares(
-        por_usuario, "Conteúdo (TF-IDF)", ["Populares", "Aleatório"],
+        por_usuario, "Conteúdo (TF-IDF)", ["Populares", "Aleatório", VARIANTE],
         [f"recall@{k}", f"ndcg@{k}", f"hit@{k}"], n_amostras=args.bootstrap, seed=args.seed)
     base_sig = pasta / f"significancia_{args.split}"
     significancia.to_csv(base_sig.with_suffix(".csv"), index=False)

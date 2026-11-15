@@ -45,6 +45,59 @@ def _termos(jogo):
     return termos
 
 
+# Atributos numéricos do próprio jogo. Nota e nº de avaliações ficam de fora:
+# vêm de outros usuários, e a FBC deve usar apenas características do item.
+ROTULOS_NUMERICOS = {"num:preco": "faixa de preço", "num:ano": "época de lançamento"}
+# O modelo principal usa só texto e tags (peso 0). A variante com preço/ano usa
+# o peso escolhido na validação (subdivisão do treino) por scripts/escolher_peso.py.
+PESO_NUMERICO = 0.0
+PESO_NUMERICO_VALIDADO = 12.0
+LIMITE_Z = 3.0
+
+
+def _ano(data):
+    try:
+        return float(str(data)[:4])
+    except ValueError:
+        return None
+
+
+def _numericos_brutos(jogo):
+    """Valores crus; None indica ausente. O preço usa log por ser muito assimétrico."""
+    preco = jogo.get("price_final")
+    try:
+        preco = math.log1p(max(0.0, float(preco))) if preco not in (None, "") else None
+    except (TypeError, ValueError):
+        preco = None
+    return {"num:preco": preco, "num:ano": _ano(jogo.get("date_release") or "")}
+
+
+def _padronizar(catalogo):
+    """Imputa ausentes com a mediana e aplica z-score limitado a ±LIMITE_Z.
+
+    O z-score é centrado: valores acima e abaixo da média têm sinais opostos,
+    então o cosseno favorece jogos do mesmo lado da média que o perfil, em vez
+    de favorecer sempre os mais caros ou mais novos (como faria um min-max).
+    """
+    brutos = {app_id: _numericos_brutos(jogo) for app_id, jogo in catalogo.items()}
+    padronizados = {app_id: {} for app_id in catalogo}
+    for atributo in ROTULOS_NUMERICOS:
+        presentes = sorted(v[atributo] for v in brutos.values() if v[atributo] is not None)
+        if len(presentes) < 2:
+            continue
+        mediana = presentes[len(presentes) // 2]
+        media = sum(presentes) / len(presentes)
+        desvio = math.sqrt(sum((x - media) ** 2 for x in presentes) / len(presentes))
+        if desvio == 0:
+            continue
+        for app_id, valores in brutos.items():
+            valor = valores[atributo] if valores[atributo] is not None else mediana
+            z = max(-LIMITE_Z, min(LIMITE_Z, (valor - media) / desvio))
+            if z:
+                padronizados[app_id][atributo] = z
+    return padronizados
+
+
 def _produto(a, b):
     if len(a) > len(b):
         a, b = b, a
@@ -52,7 +105,8 @@ def _produto(a, b):
 
 
 class RecomendadorConteudo:
-    def __init__(self, treino=None, catalogo=None, limite_catalogo=8000, ids_obrigatorios=()):
+    def __init__(self, treino=None, catalogo=None, limite_catalogo=8000, ids_obrigatorios=(),
+                 peso_numerico=PESO_NUMERICO):
         obrigatorios = set(treino["app_id"]) if treino is not None else set()
         obrigatorios.update(ids_obrigatorios)
         self.catalogo = catalogo if catalogo is not None else carregar_catalogo(limite_catalogo, obrigatorios)
@@ -71,6 +125,8 @@ class RecomendadorConteudo:
         for termos in contagens.values():
             df.update(termos.keys())
         total = len(contagens)
+        self.peso_numerico = peso_numerico
+        numericos = _padronizar(self.catalogo) if peso_numerico else {}
         self.vetores = {}
         self.indice = defaultdict(list)
         for app_id, termos in contagens.items():
@@ -78,6 +134,10 @@ class RecomendadorConteudo:
                 continue
             vetor = {termo: (1 + math.log(freq)) * (math.log((1 + total) / (1 + df[termo])) + 1)
                      for termo, freq in termos.items()}
+            # Dimensões numéricas entram no mesmo vetor antes da normalização L2,
+            # então o cosseno continua sendo um único produto escalar.
+            for atributo, z in numericos.get(app_id, {}).items():
+                vetor[atributo] = peso_numerico * z
             norma = math.sqrt(sum(peso * peso for peso in vetor.values()))
             vetor = {termo: peso / norma for termo, peso in vetor.items()}
             self.vetores[app_id] = vetor
@@ -118,13 +178,17 @@ class RecomendadorConteudo:
         positivos = [app_id for app_id, gostou in preferencias if gostou and app_id in self.vetores]
         for score, app_id in melhores:
             vetor = self.vetores[app_id]
-            contrib = sorted(((peso * vetor[termo], termo) for termo, peso in perfil.items()
-                              if peso > 0 and termo in vetor), reverse=True)
+            # Contribuição de cada termo ao cosseno; só as positivas explicam a recomendação.
+            contrib = sorted((par for par in ((peso * vetor[termo], termo) for termo, peso in perfil.items()
+                                              if termo in vetor) if par[0] > 0), reverse=True)
             tags = [self.tag_labels.get(termo, termo[4:]) for _, termo in contrib if termo.startswith("tag:")][:3]
             parecido = max(positivos, key=lambda item: self.similaridade(item, app_id)) if positivos else None
             resultados.append({"app_id": app_id, "score": round(score, 4),
                                "tags_em_comum": tags,
-                               "termos_em_comum": [termo for _, termo in contrib if not termo.startswith("tag:")][:3],
+                               "termos_em_comum": [termo for _, termo in contrib
+                                                   if not termo.startswith(("tag:", "num:"))][:3],
+                               "atributos_em_comum": [ROTULOS_NUMERICOS[termo] for _, termo in contrib
+                                                      if termo in ROTULOS_NUMERICOS],
                                "parecido_com": self.catalogo[parecido]["title"] if parecido else None,
                                **self.catalogo[app_id]})
         return resultados

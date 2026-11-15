@@ -10,7 +10,7 @@ import streamlit as st
 
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
-from backend.app.recommender.modelo import RecomendadorConteudo  # noqa: E402
+from backend.app.recommender.modelo import PESO_NUMERICO_VALIDADO, RecomendadorConteudo  # noqa: E402
 
 
 st.set_page_config(page_title="Steam Style · Descubra seu próximo jogo", page_icon="🎮", layout="wide")
@@ -54,14 +54,18 @@ h1,h2,h3 { font-family: 'Space Grotesk',sans-serif; letter-spacing: -.035em; }
 
 
 @st.cache_resource(show_spinner="Preparando o catálogo e os vetores dos jogos...")
-def carregar_modelo():
+def carregar_modelo(peso_numerico):
     caminho = RAIZ / "data" / "processed" / "interacoes.csv"
     treino = pd.read_csv(caminho) if caminho.exists() else None
-    return RecomendadorConteudo(treino)
+    return RecomendadorConteudo(treino, peso_numerico=peso_numerico)
 
 
+usar_numericos = st.sidebar.toggle(
+    "Considerar preço e época de lançamento", value=False,
+    help="Variante experimental: soma preço (log) e ano, padronizados por z-score, ao vetor TF-IDF. "
+         "Na avaliação offline não superou o modelo só com texto.")
 try:
-    rec = carregar_modelo()
+    rec = carregar_modelo(PESO_NUMERICO_VALIDADO if usar_numericos else 0.0)
 except (FileNotFoundError, ValueError) as erro:
     st.error(str(erro))
     st.stop()
@@ -119,6 +123,8 @@ with direita:
             tags = "".join(f'<span class="tag">{escape(tag)}</span>' for tag in jogo["tags"][:4])
             razoes = jogo["tags_em_comum"] or jogo["termos_em_comum"]
             motivo = ", ".join(razoes) if razoes else "descrição semelhante"
+            if jogo.get("atributos_em_comum"):
+                motivo += " · também " + " e ".join(jogo["atributos_em_comum"]) + " parecidos"
             parecido = f' · Lembra <strong>{escape(jogo["parecido_com"])}</strong>' if jogo["parecido_com"] else ""
             descricao = escape(jogo["description"][:145].strip())
             if len(jogo["description"]) > 145:
