@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Relatório técnico — Recomendação de jogos por filtragem baseada em conteúdo</title>
+<style>
+/* ---------- Página ABNT (NBR 14724 / 10719) ---------- */
+@page {
+  size: A4;
+  margin: 3cm 2cm 2cm 3cm;
+  @top-right { content: counter(page); font-family: "Times New Roman", Times, serif; font-size: 10pt; vertical-align: bottom; padding-bottom: 0.6cm; }
+}
+@page pre { @top-right { content: none; } }
+.pre { page: pre; }
+
+html { font-family: "Times New Roman", Times, serif; font-size: 12pt; color: #000; background: #fff; }
+body { margin: 0; }
+p { margin: 0; line-height: 1.5; text-align: justify; text-indent: 1.25cm; hyphens: auto; }
+p.sem-recuo { text-indent: 0; }
+.quebra { break-before: page; }
+
+/* Títulos: seção primária em caixa alta e negrito; secundária em negrito */
+h1, h2, .titulo-sem-numero { font-size: 12pt; line-height: 1.5; margin: 0; break-after: avoid; }
+h1 { text-transform: uppercase; font-weight: bold; margin: 18pt 0 12pt; }
+h2 { font-weight: bold; margin: 12pt 0 6pt; }
+.titulo-sem-numero { text-align: center; text-transform: uppercase; font-weight: bold; margin: 0 0 18pt; }
+
+ul.lista { margin: 0 0 0 1.25cm; padding: 0 0 0 0.5cm; line-height: 1.5; text-align: justify; }
+
+/* Ilustrações e tabelas: legenda acima, fonte abaixo, corpo 10 pt simples */
+figure, .tabela { margin: 10pt 0 12pt; break-inside: avoid; }
+figcaption, .legenda { font-size: 10pt; line-height: 1.2; text-align: center; margin-bottom: 4pt; }
+.fonte { font-size: 10pt; line-height: 1.2; text-align: left; margin-top: 3pt; text-indent: 0; }
+figure img { display: block; margin: 0 auto; max-width: 100%; }
+table { border-collapse: collapse; width: 100%; font-size: 9.5pt; line-height: 1.2; }
+th, td { padding: 2.5pt 4pt; text-align: right; }
+th:first-child, td:first-child { text-align: left; }
+thead th { border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; }
+tbody tr:last-child td { border-bottom: 1px solid #000; }
+td.esq, th.esq { text-align: left; }
+tr.destaque td { font-weight: bold; }
+
+/* Equações numeradas */
+.equacao { display: flex; align-items: center; margin: 6pt 0; }
+.equacao math { flex: 1; font-size: 12pt; }
+.equacao .num { width: 1.2cm; text-align: right; }
+
+/* Folha de rosto */
+.rosto { height: 24.6cm; display: flex; flex-direction: column; text-align: center; text-transform: uppercase; font-weight: bold; line-height: 1.5; }
+.rosto .autores { margin-top: 1.5cm; }
+.rosto .titulo { margin-top: auto; font-size: 13pt; }
+.rosto .natureza { text-transform: none; font-weight: normal; width: 8cm; margin: 1.5cm 0 0 auto; text-align: justify; font-size: 11pt; line-height: 1.2; }
+.rosto .local { margin-top: auto; }
+
+/* Sumário */
+.sumario div { display: flex; line-height: 1.5; }
+.sumario .t { flex: 0 1 auto; }
+.sumario .pontos { flex: 1; border-bottom: 1px dotted #000; margin: 0 4pt 5pt; }
+.sumario .pg { flex: 0 0 auto; }
+.sumario .s1 .t { text-transform: uppercase; font-weight: bold; }
+.sumario .s2 { padding-left: 0; }
+
+.resumo p { line-height: 1.0; text-indent: 0; margin-bottom: 8pt; }
+.preencher { background: #fff27a; }
+.referencias p { text-indent: 0; text-align: left; line-height: 1.0; margin-bottom: 12pt; }
+code { font-family: "Courier New", monospace; font-size: 10.5pt; }
+</style>
+</head>
+<body>
+
+<!-- ===================== FOLHA DE ROSTO ===================== -->
+<section class="pre rosto">
+  <div>Universidade do Estado do Amazonas<br>Escola Superior de Tecnologia<br>Oficina I</div>
+  <div class="autores">Danilo Cavalcante<br>Gabriel Ribeiro<br>Rennan Kauê<br>Thiago Ramon</div>
+  <div class="titulo">Steam Style: recomendação de jogos por filtragem baseada em conteúdo</div>
+  <div class="natureza">Relatório técnico apresentado à disciplina Oficina I como requisito parcial de avaliação do trabalho “Sistema de Recomendação por Filtragem Baseada em Conteúdo”.<br><br>Professor: Fábio Santos</div>
+  <div class="local">Manaus<br>2026</div>
+</section>
+
+<!-- ===================== RESUMO E SUMÁRIO ===================== -->
+<section class="pre quebra resumo">
+  <div class="titulo-sem-numero">Resumo</div>
+  <p>Este relatório apresenta o Steam Style, um sistema que recomenda jogos parecidos com os que o usuário já aprovou, usando apenas as descrições e as tags de cada jogo. Os dados vêm do conjunto público <i>Game Recommendations on Steam</i>, com 50.872 jogos e 41,2 milhões de avaliações. Cada jogo é representado por um vetor TF-IDF implementado sem bibliotecas prontas, com peso maior para as tags. O perfil do usuário soma os vetores dos jogos aprovados e subtrai os reprovados, e a similaridade do cosseno ordena o Top-N, com uma explicação dos termos que mais contribuíram para cada item. A avaliação offline usou 500 usuários sorteados com semente fixa, divisão temporal dos 20% mais recentes e uma validação adicional com <i>leave-one-out</i>. O modelo obteve Recall@10 de 0,0358 e nDCG@10 de 0,0265, contra 0,0176 e 0,0085 do baseline de mais populares e zero do aleatório; a vantagem é significativa contra o aleatório, mas não contra os populares (bootstrap pareado, IC 95%). O modelo cobre 12% do catálogo, contra 0,2% dos populares, mas tem a menor diversidade intra-lista, sinal de superespecialização. A análise exploratória mostrou que os jogos mais avaliados da base (Counter-Strike: GO, Dota 2, GTA V) não têm descrição nem tags, o que limita qualquer abordagem baseada em conteúdo neste conjunto.</p>
+  <p><b>Palavras-chave:</b> sistemas de recomendação; filtragem baseada em conteúdo; TF-IDF; similaridade do cosseno; jogos eletrônicos.</p>
+
+  <div class="titulo-sem-numero" style="margin-top:22pt">Sumário</div>
+  <div class="sumario">
+    <div class="s1"><span class="t">1 Introdução</span><span class="pontos"></span><span class="pg">3</span></div>
+    <div class="s1"><span class="t">2 Dados e análise exploratória</span><span class="pontos"></span><span class="pg">3</span></div>
+    <div class="s2"><span class="t">2.1 Fonte e qualidade dos metadados</span><span class="pontos"></span><span class="pg">3</span></div>
+    <div class="s2"><span class="t">2.2 Texto, tags e atributos numéricos</span><span class="pontos"></span><span class="pg">4</span></div>
+    <div class="s2"><span class="t">2.3 Interações e amostra de usuários</span><span class="pontos"></span><span class="pg">4</span></div>
+    <div class="s1"><span class="t">3 Metodologia</span><span class="pontos"></span><span class="pg">5</span></div>
+    <div class="s2"><span class="t">3.1 Pré-processamento e representação dos itens</span><span class="pontos"></span><span class="pg">5</span></div>
+    <div class="s2"><span class="t">3.2 Perfil, similaridade e Top-N</span><span class="pontos"></span><span class="pg">5</span></div>
+    <div class="s2"><span class="t">3.3 Explicação e exemplo numérico</span><span class="pontos"></span><span class="pg">6</span></div>
+    <div class="s2"><span class="t">3.4 Interface de demonstração</span><span class="pontos"></span><span class="pg">6</span></div>
+    <div class="s1"><span class="t">4 Protocolo experimental</span><span class="pontos"></span><span class="pg">6</span></div>
+    <div class="s1"><span class="t">5 Resultados</span><span class="pontos"></span><span class="pg">7</span></div>
+    <div class="s2"><span class="t">5.1 Comparação com os baselines</span><span class="pontos"></span><span class="pg">7</span></div>
+    <div class="s2"><span class="t">5.2 Variante com preço e ano</span><span class="pontos"></span><span class="pg">8</span></div>
+    <div class="s2"><span class="t">5.3 Avaliação qualitativa</span><span class="pontos"></span><span class="pg">8</span></div>
+    <div class="s1"><span class="t">6 Discussão e limitações</span><span class="pontos"></span><span class="pg">9</span></div>
+    <div class="s1"><span class="t">7 Conclusão</span><span class="pontos"></span><span class="pg">9</span></div>
+    <div class="s1"><span class="t">8 Contribuição de cada membro</span><span class="pontos"></span><span class="pg">10</span></div>
+    <div class="s1"><span class="t">Referências</span><span class="pontos"></span><span class="pg">10</span></div>
+  </div>
+</section>
+
+<!-- ===================== 1 INTRODUÇÃO ===================== -->
+<h1 class="quebra" id="s1">1 Introdução</h1>
+<p>Lojas digitais de jogos oferecem dezenas de milhares de títulos, e encontrar um jogo novo que combine com o próprio gosto é difícil sem algum tipo de recomendação. Este trabalho constrói, avalia e apresenta um sistema de recomendação para esse cenário usando <b>filtragem baseada em conteúdo</b> (FBC): recomendam-se itens parecidos com aqueles de que o usuário já gostou, comparando as características dos próprios itens com um perfil montado a partir do histórico do usuário (PAZZANI; BILLSUS, 2007; LOPS; DE GEMMIS; SEMERARO, 2011).</p>
+<p>Jogos são um domínio adequado à FBC porque cada título é bem descrito por <i>tags</i> atribuídas pela comunidade (“Survival”, “Roguelike”, “Story Rich”), que resumem gênero, mecânica e clima. Além disso, a matriz usuário × jogo é extremamente esparsa (seção 2.3), situação em que métodos colaborativos sofrem, e a FBC permite explicar cada recomendação pelos termos em comum com o perfil. O sistema, chamado Steam Style, implementa sem bibliotecas prontas de recomendação ou de linguagem natural o pipeline clássico: pré-processamento, TF-IDF, perfil do usuário, similaridade do cosseno, Top-N e explicação. Ele é comparado a dois baselines com um protocolo temporal sem vazamento de dados, e todos os resultados podem ser reproduzidos com um único comando (<code>python scripts/reproduzir.py</code>).</p>
+
+<!-- ===================== 2 DADOS ===================== -->
+<h1 id="s2">2 Dados e análise exploratória</h1>
+<h2 id="s21">2.1 Fonte e qualidade dos metadados</h2>
+<p>Os dados vêm do conjunto público <i>Game Recommendations on Steam</i> (KOZYRIEV, 2023): <code>games.csv</code> (50.872 jogos, com título, lançamento e preço), <code>games_metadata.json</code> (descrição e tags) e <code>recommendations.csv</code> (41.154.794 avaliações binárias “recomendo/não recomendo” de 13,8 milhões de usuários, de 2010 a 2022). Usuários aparecem apenas por um identificador numérico, sem dados pessoais. A análise exploratória completa está em <code>notebooks/eda.ipynb</code>.</p>
+<p>Preço e data estão sempre preenchidos, mas 20,4% dos jogos não têm descrição. O achado mais importante é <b>quais</b> jogos não a têm: 1.229 títulos sem descrição e sem tags concentram 61,8% de todas as avaliações da base, entre eles Counter-Strike: Global Offensive, PUBG, Dota 2, GTA V e Terraria. Sem nenhum texto, esses jogos não podem ser representados por conteúdo. Os outros 9.144 jogos sem descrição, mas com tags, são quase todos DLCs (1,2% das avaliações).</p>
+<p>A Figura 1 mostra os filtros até o catálogo usado: exige-se descrição; removem-se pelo título itens que não são jogos (trilhas sonoras, DLCs, passes de temporada, prólogos, servidores dedicados); e mantêm-se os 8.000 jogos mais avaliados, com desempate pelo identificador. O número de avaliações é usado só nesse recorte, nunca na similaridade.</p>
+<figure>
+  <figcaption>Figura 1 – Filtros do arquivo bruto ao catálogo usado</figcaption>
+  <img src="../../results/eda/01_funil_catalogo.png" style="width:12cm">
+  <p class="fonte">Fonte: Elaborado pelos autores (2026), a partir de Kozyriev (2023).</p>
+</figure>
+
+<h2 id="s22">2.2 Texto, tags e atributos numéricos</h2>
+<p>As descrições são curtas, com mediana de 37 palavras, enquanto as tags são ricas: 16,6 por jogo em média, de um vocabulário de 439, e nenhum jogo do recorte está sem tags (Figura 2). Essa assimetria motivou o peso maior das tags (seção 3.1). As tags mais comuns (Singleplayer, em 73% dos jogos, Indie, Action) quase não distinguem jogos, e o fator IDF reduz o peso delas. O preço é fortemente assimétrico (mediana de US$ 9,99; 20,3% gratuitos; assimetria de 1,53), e a transformação <i>log</i>(1 + preço) reduz a assimetria para −0,55. Os anos vão de 1997 a 2023, com mediana em 2018. Nota média e número de avaliações não são usados como atributos, por resumirem a opinião de outros usuários.</p>
+<figure>
+  <figcaption>Figura 2 – Tamanho das descrições e tags mais frequentes no catálogo</figcaption>
+  <img src="../../results/eda/03_texto_e_tags.png" style="width:14cm">
+  <p class="fonte">Fonte: Elaborado pelos autores (2026), a partir de Kozyriev (2023).</p>
+</figure>
+
+<h2 id="s23">2.3 Interações e amostra de usuários</h2>
+<p>As avaliações são predominantemente positivas (85,8%) e concentradas: 1% dos jogos recebe 55,6% das interações. A mediana é de uma avaliação por usuário, só 13,9% dos usuários avaliaram cinco jogos ou mais e a matriz usuário × jogo tem densidade de 0,008%. Como não há como separar treino e teste com um ou dois jogos, a avaliação usa 500 usuários com ao menos cinco jogos, sorteados com semente 42 (6.214 avaliações). Ao exigir que o jogo esteja no catálogo, 2.509 avaliações saem por falta de descrição e só 17 pelo filtro de extras, restando 3.688 avaliações de 483 usuários, acima dos mínimos do trabalho (500 itens e 50 usuários).</p>
+
+<!-- ===================== 3 METODOLOGIA ===================== -->
+<h1 id="s3">3 Metodologia</h1>
+<h2 id="s31">3.1 Pré-processamento e representação dos itens</h2>
+<p>A descrição é convertida para minúsculas, acentos e pontuação são removidos e descartam-se tokens com até dois caracteres e stopwords em inglês e português, incluindo palavras do domínio (<i>game</i>, <i>play</i>). Aplica-se então um stemming leve por remoção de sufixos, inspirado em Porter (1980). O tratamento reduz os tokens em 41% e o vocabulário em 20%. Cada tag é mantida como um termo inteiro (<code>tag:open_world</code>). O vetor TF-IDF de cada jogo <i>d</i> (SALTON; BUCKLEY, 1988; MANNING; RAGHAVAN; SCHÜTZE, 2008) é calculado em código próprio pela Equação 1, em que <i>f</i><sub><i>t,d</i></sub> é a frequência do termo, <i>N</i> o número de jogos e <i>df</i><sub><i>t</i></sub> o número de jogos com o termo. Cada tag entra com frequência 4, pesando mais que uma palavra incidental, e o vetor é normalizado pela norma L2.</p>
+<div class="equacao">
+<math display="block"><mrow><msub><mi>w</mi><mrow><mi>t</mi><mo>,</mo><mi>d</mi></mrow></msub><mo>=</mo><mo>(</mo><mn>1</mn><mo>+</mo><mi>ln</mi><msub><mi>f</mi><mrow><mi>t</mi><mo>,</mo><mi>d</mi></mrow></msub><mo>)</mo><mo>·</mo><mrow><mo>(</mo><mi>ln</mi><mfrac><mrow><mn>1</mn><mo>+</mo><mi>N</mi></mrow><mrow><mn>1</mn><mo>+</mo><mi>d</mi><msub><mi>f</mi><mi>t</mi></msub></mrow></mfrac><mo>+</mo><mn>1</mn><mo>)</mo></mrow></mrow></math>
+<span class="num">(1)</span></div>
+<p>Numa variante, preço e ano entram no mesmo vetor como duas dimensões extras: ausentes recebem a mediana, o preço passa por <i>log</i>(1 + <i>x</i>) e ambos são padronizados por z-score, limitados a ±3 e multiplicados por um peso. O z-score centrado faz o cosseno favorecer jogos do mesmo lado da média que o perfil, enquanto uma escala min-max, toda positiva, favoreceria sempre os mais caros ou mais novos.</p>
+
+<h2 id="s32">3.2 Perfil, similaridade e Top-N</h2>
+<p>O perfil <b>p</b> usa apenas o treino: soma os vetores dos jogos aprovados (<i>P</i>), subtrai os dos reprovados (<i>R</i>) e é normalizado (Equação 2). Como os vetores são unitários, isso equivale a uma média com peso +1 para avaliações positivas e −1 para negativas, já que a base só tem avaliações binárias. Para vetores unitários, o cosseno se reduz ao produto escalar.</p>
+<div class="equacao">
+<math display="block"><mrow><mi mathvariant="normal" style="font-weight:bold">p</mi><mo>=</mo><mfrac><mrow><munder><mo>∑</mo><mrow><mi>i</mi><mo>∈</mo><mi>P</mi></mrow></munder><msub><mi mathvariant="normal" style="font-weight:bold">v</mi><mi>i</mi></msub><mo>−</mo><munder><mo>∑</mo><mrow><mi>j</mi><mo>∈</mo><mi>R</mi></mrow></munder><msub><mi mathvariant="normal" style="font-weight:bold">v</mi><mi>j</mi></msub></mrow><mrow><mo>‖</mo><munder><mo>∑</mo><mrow><mi>i</mi><mo>∈</mo><mi>P</mi></mrow></munder><msub><mi mathvariant="normal" style="font-weight:bold">v</mi><mi>i</mi></msub><mo>−</mo><munder><mo>∑</mo><mrow><mi>j</mi><mo>∈</mo><mi>R</mi></mrow></munder><msub><mi mathvariant="normal" style="font-weight:bold">v</mi><mi>j</mi></msub><mo>‖</mo></mrow></mfrac><mspace width="2em"/><mtext>cos</mtext><mo stretchy="false">(</mo><mi mathvariant="normal" style="font-weight:bold">p</mi><mo>,</mo><msub><mi mathvariant="normal" style="font-weight:bold">v</mi><mi>d</mi></msub><mo stretchy="false">)</mo><mo>=</mo><munder><mo>∑</mo><mi>t</mi></munder><msub><mi>p</mi><mi>t</mi></msub><mo>·</mo><msub><mi>v</mi><mrow><mi>d</mi><mo>,</mo><mi>t</mi></mrow></msub></mrow></math>
+<span class="num">(2)</span></div>
+<p>O cálculo percorre um índice invertido (termo → jogos que o contêm), pontuando só os jogos com algum termo em comum com o perfil. Os jogos já avaliados são excluídos, os candidatos com cosseno positivo são ordenados de forma decrescente, com desempate pelo identificador, e os <i>N</i> primeiros formam a recomendação.</p>
+
+<h2 id="s33">3.3 Explicação e exemplo numérico</h2>
+<p>Como o cosseno é uma soma de contribuições por termo (<i>p</i><sub><i>t</i></sub> · <i>v</i><sub><i>d,t</i></sub>), a explicação mostra exatamente os termos de maior contribuição positiva, com prioridade para as tags, e o jogo do histórico mais parecido com o item. A explicação reflete, portanto, o cálculo feito. A Tabela 1 decompõe um caso real da interface: quem aprova só <i>Unturned</i> recebe <i>The Fifth Day</i> em 1º lugar, com cosseno 0,4603, exibido como “Em comum: Post-apocalyptic, Zombies, Massively Multiplayer · Lembra Unturned”. O valor é uma similaridade, não uma probabilidade de gostar.</p>
+<div class="tabela">
+  <div class="legenda">Tabela 1 – Decomposição do cosseno entre o perfil (Unturned) e The Fifth Day</div>
+  <table>
+    <thead><tr><th>Termo em comum</th><th>Peso no perfil</th><th>Peso no item</th><th>Contribuição</th></tr></thead>
+    <tbody>
+      <tr><td>tag Post-apocalyptic</td><td>0,257</td><td>0,239</td><td>0,0613</td></tr>
+      <tr><td>tag Zombies</td><td>0,255</td><td>0,238</td><td>0,0606</td></tr>
+      <tr><td>tag Massively Multiplayer</td><td>0,237</td><td>0,221</td><td>0,0525</td></tr>
+      <tr><td>tag Crafting</td><td>0,236</td><td>0,220</td><td>0,0518</td></tr>
+      <tr><td>outros 11 termos em comum</td><td>—</td><td>—</td><td>0,2341</td></tr>
+      <tr class="destaque"><td>Cosseno (soma)</td><td></td><td></td><td>0,4603</td></tr>
+    </tbody>
+  </table>
+  <p class="fonte">Fonte: Elaborado pelos autores (2026).</p>
+</div>
+
+<h2 id="s34">3.4 Interface de demonstração</h2>
+<p>A interface em Streamlit (<code>streamlit run frontend/app.py</code>) tem dois modos: marcar jogos de que se gostou, e opcionalmente de que não se gostou, o que funciona como questionário inicial para o <i>cold start</i>; ou escolher um usuário real da amostra. Em ambos, o Top-N (5 a 20) aparece com capa, tags, pontuação e explicação. Uma opção liga a variante com preço e ano, e o mesmo núcleo é exposto por uma API FastAPI opcional.</p>
+
+<!-- ===================== 4 PROTOCOLO ===================== -->
+<h1 id="s4">4 Protocolo experimental</h1>
+<p>No protocolo principal, as avaliações de cada usuário com ao menos cinco jogos são ordenadas por data e as 20% mais recentes vão para o teste (3.099 avaliações de treino e 589 de teste), simulando o uso real: o sistema conhece o passado e tenta prever o que o usuário aprovou depois. Como validação adicional, usou-se <i>leave-one-out</i>: reserva-se a última avaliação positiva e descartam-se as posteriores (209 usuários). Um jogo é <b>relevante</b> quando o usuário o recomendou no teste (<code>is_recommended = True</code>), único sinal explícito de gosto na base, que não tem notas em escala. Entram nas médias os 185 usuários com ao menos um relevante no teste (2,6 em média).</p>
+<p>O perfil e o ranking de popularidade usam só o treino. Todos os métodos compartilham o mesmo catálogo candidato (8.328 jogos: o recorte mais os jogos da amostra que passam pelos mesmos filtros, incluídos apenas pelos metadados) e excluem os jogos do treino de cada usuário. Foram comparados: <b>aleatório</b> (semente 42), <b>mais populares</b> (mais avaliações positivas no treino), <b>conteúdo</b> (seções 3.1 e 3.2) e a variante <b>conteúdo + preço/ano</b>. Para <i>N</i> = 5 e 10, calculam-se por usuário Precision@N (fração do Top-N relevante), Recall@N (fração dos relevantes no Top-N), nDCG@N com ganho binário e desconto 1/log<sub>2</sub>(posição + 1) (JÄRVELIN; KEKÄLÄINEN, 2002) e Hit@N. Além da acurácia, medem-se a <b>cobertura do catálogo</b> e a <b>diversidade intra-lista</b> (1 menos o cosseno médio entre pares do Top-10).</p>
+<p>As diferenças são testadas por <b>bootstrap pareado por usuário</b> (EFRON; TIBSHIRANI, 1993), com 10.000 reamostragens e intervalo de confiança de 95%. O peso da variante foi escolhido sem tocar no teste: o treino foi dividido de novo pelo mesmo protocolo (434 avaliações de validação, 144 usuários), e o peso com maior nDCG@10 entre 0 e 32 foi 12. Todos os parâmetros estão fixados nos scripts, e <code>python scripts/reproduzir.py</code> refaz amostra, avaliações, figuras e testes.</p>
+
+<!-- ===================== 5 RESULTADOS ===================== -->
+<h1 id="s5">5 Resultados</h1>
+<h2 id="s51">5.1 Comparação com os baselines</h2>
+<p>A Tabela 2 reúne as métricas do protocolo temporal. O conteúdo lidera quase todas as métricas de acerto, com Recall@10 duas vezes maior que o dos populares (0,0358 contra 0,0176) e nDCG@10 três vezes maior (0,0265 contra 0,0085). O aleatório não acertou nenhum jogo. Os valores absolutos são baixos, como esperado, com mais de 8 mil candidatos e cerca de 2,6 jogos relevantes por usuário.</p>
+<div class="tabela">
+  <div class="legenda">Tabela 2 – Resultados com divisão temporal (185 usuários; cobertura e diversidade no Top-10)</div>
+  <table>
+    <thead><tr><th>Modelo</th><th>P@5</th><th>R@5</th><th>nDCG@5</th><th>P@10</th><th>R@10</th><th>nDCG@10</th><th>Hit@10</th><th>Cobert.</th><th>Divers.</th></tr></thead>
+    <tbody>
+      <tr><td>Aleatório</td><td>0,0000</td><td>0,0000</td><td>0,0000</td><td>0,0000</td><td>0,0000</td><td>0,0000</td><td>0,0000</td><td>0,2004</td><td>0,9472</td></tr>
+      <tr><td>Mais populares</td><td>0,0054</td><td>0,0149</td><td>0,0075</td><td>0,0032</td><td>0,0176</td><td>0,0085</td><td>0,0324</td><td>0,0024</td><td>0,8540</td></tr>
+      <tr class="destaque"><td>Conteúdo (TF-IDF)</td><td>0,0065</td><td>0,0221</td><td>0,0217</td><td>0,0054</td><td>0,0358</td><td>0,0265</td><td>0,0541</td><td>0,1219</td><td>0,6992</td></tr>
+      <tr><td>Conteúdo + preço/ano</td><td>0,0076</td><td>0,0232</td><td>0,0192</td><td>0,0043</td><td>0,0241</td><td>0,0190</td><td>0,0432</td><td>0,1118</td><td>0,7469</td></tr>
+    </tbody>
+  </table>
+  <p class="fonte">Fonte: Elaborado pelos autores (2026). Arquivo: <code>results/metricas_temporal.csv</code>.</p>
+</div>
+<p>A Tabela 3 mostra se as diferenças são reais. Contra o aleatório, o conteúdo é significativamente melhor nas três métricas. Contra os populares, fica à frente em todas, mas <b>nenhuma diferença é significativa a 5%</b>: no Hit@10, a vantagem equivale a 10 contra 6 usuários com acerto entre 185. O caso mais próximo é o nDCG@10 (<i>p</i> ≈ 0,07), coerente com o conteúdo acertar em posições mais altas.</p>
+<div class="tabela">
+  <div class="legenda">Tabela 3 – Bootstrap pareado do modelo de conteúdo contra os baselines (divisão temporal)</div>
+  <table>
+    <thead><tr><th>Comparação</th><th class="esq">Métrica</th><th>Diferença</th><th>IC 95%</th><th><i>p</i></th></tr></thead>
+    <tbody>
+      <tr><td>Conteúdo vs. populares</td><td class="esq">Recall@10</td><td>+0,0182</td><td>[−0,0104; 0,0486]</td><td>0,215</td></tr>
+      <tr><td>Conteúdo vs. populares</td><td class="esq">nDCG@10</td><td>+0,0180</td><td>[−0,0015; 0,0408]</td><td>0,073</td></tr>
+      <tr><td>Conteúdo vs. populares</td><td class="esq">Hit@10</td><td>+0,0216</td><td>[−0,0162; 0,0595]</td><td>0,348</td></tr>
+      <tr><td>Conteúdo vs. aleatório</td><td class="esq">Recall@10</td><td>+0,0358</td><td>[0,0135; 0,0622]</td><td>&lt; 0,001</td></tr>
+      <tr><td>Conteúdo vs. aleatório</td><td class="esq">nDCG@10</td><td>+0,0265</td><td>[0,0090; 0,0485]</td><td>&lt; 0,001</td></tr>
+      <tr><td>Conteúdo vs. aleatório</td><td class="esq">Hit@10</td><td>+0,0541</td><td>[0,0216; 0,0865]</td><td>&lt; 0,001</td></tr>
+    </tbody>
+  </table>
+  <p class="fonte">Fonte: Elaborado pelos autores (2026). Arquivo: <code>results/significancia_temporal.csv</code>.</p>
+</div>
+<p>Cobertura e diversidade mostram o outro lado. Os populares recomendam quase a mesma lista para todos (cobertura de 0,24%), e o conteúdo alcança 12% do catálogo, mas tem a <b>menor diversidade intra-lista</b> (0,70): itens parecidos aparecem juntos, a superespecialização típica da FBC. O <i>leave-one-out</i> repete a ordenação conteúdo &gt; populares &gt; aleatório (Recall@10 de 0,0287, 0,0191 e 0,0048; nDCG@10 de 0,0198, 0,0084 e 0,0030), com ainda menos acertos (6 contra 4 usuários) e sem diferença significativa contra os populares (nDCG@10: +0,0113; IC 95% [−0,0068; 0,0321]). As tabelas completas estão em <code>results/</code>.</p>
+
+<h2 id="s52">5.2 Variante com preço e ano</h2>
+<p>Na validação, o peso 12 elevou o nDCG@10 de 0,0239 para 0,0299, mas o ganho não se confirmou no teste: a variante perdeu acerto nos dois protocolos (Recall@10 de 0,0358 para 0,0241 no temporal), ainda que sem significância (nDCG@10: −0,0075; IC 95% [−0,0167; 0,0000]). A vantagem na validação equivalia a uns dois usuários entre 144, dentro do ruído. Em troca, a variante elevou a diversidade de 0,70 para 0,75, ao aproximar jogos de gêneros diferentes com perfil comercial parecido. O modelo só com texto e tags, que já era o do trabalho antes do experimento, foi mantido como principal, pois trocá-lo com base no teste seria vazamento.</p>
+
+<h2 id="s53">5.3 Avaliação qualitativa</h2>
+<p>O usuário <b>#5170533</b> aprovou jogos de ação e RPG (Far Cry 3, Darksiders III, Bayonetta, a série Gujian) e, no teste, Dishonored 2, Nioh 2 e Fate Seeker II. O Top-10 traz jogos de artes marciais e mundo aberto, e Fate Seeker II aparece em 4º lugar, explicado pelas tags Martial Arts, Hack and Slash e RPG. É um acerto coerente. O usuário <b>#5611614</b> aprovou jogos de guerra (Day of Infamy, Red Orchestra 2, Rising Storm 2), e Post Scriptum, aprovado no teste, aparece em 7º. Porém, os dez itens têm a mesma explicação (Military, War, Historical), e nada lembra LEGO The Hobbit ou The Walking Dead, que ele também aprovou: um acerto acompanhado de superespecialização.</p>
+<p>O usuário <b>#767</b> é um caso de erro. Ele aprovou The Witcher, Serious Sam Classic e Half-Life 2, reprovou Serious Sam 3 e, no teste, aprovou Dragon Age: Origins. Seis dos dez itens recomendados são da franquia Half-Life, que compartilha tags como Silent Protagonist e Classic. Com três jogos positivos, um deles dominou o perfil, e o RPG de fantasia que ele procurava só aparece de forma indireta (Fable, Game of Thrones). O erro expõe dois problemas: perfis curtos são instáveis, e versões quase duplicadas de uma franquia ocupam várias posições do Top-N. Os três casos completos estão em <code>results/exemplos_qualitativos.md</code>.</p>
+
+<!-- ===================== 6 DISCUSSÃO ===================== -->
+<h1 id="s6">6 Discussão e limitações</h1>
+<p><b>Dependência dos metadados.</b> É a limitação mais forte. Os jogos que concentram 62% das avaliações não têm descrição nem tags e não podem ser recomendados nem entrar no perfil; 40% das avaliações da amostra se perderam por isso, e títulos como Terraria e Portal 2 não aparecem na interface. A solução seria completar os metadados com uma fonte externa, como a API da loja Steam. <b>Superespecialização.</b> O conteúdo tem a menor diversidade, e há listas inteiras com a mesma explicação ou dominadas por uma franquia; reordenar o Top-N por relevância marginal máxima, MMR (CARBONELL; GOLDSTEIN, 1998), é o próximo passo natural. <b>Cold start e perfis curtos.</b> O sistema precisa de ao menos um jogo aprovado; a escolha manual atende o usuário novo, mas com poucos jogos um título domina o perfil.</p>
+<p><b>Baseline de populares e tamanho da amostra.</b> O conteúdo supera os populares sem significância, em linha com a força desse baseline em tarefas Top-N (CREMONESI; KOREN; TURRIN, 2010); uma amostra maior (<code>--usuarios 2000</code>) daria mais poder ao teste. <b>Protocolo e heurísticas.</b> O teste temporal mede a recuperação de avaliações futuras, não a satisfação com recomendações novas; avaliações também dependem de preço, promoções e amigos, e a relevância binária ignora a intensidade do gosto. O filtro de extras é heurístico e deixou passar cerca de 15 demos e servidores de teste, que surgem como quase cópias do jogo original.</p>
+
+<!-- ===================== 7 CONCLUSÃO ===================== -->
+<h1 id="s7">7 Conclusão</h1>
+<p>Este trabalho implementou à mão um sistema de recomendação de jogos por filtragem baseada em conteúdo, com pré-processamento, TF-IDF com tags ponderadas, perfil com avaliações positivas e negativas, cosseno, Top-N sem itens consumidos e explicações que decompõem o próprio cálculo. Com protocolo temporal sem vazamento, o sistema superou significativamente o aleatório e ficou à frente dos mais populares em todas as métricas de acerto, embora sem significância nesta amostra, e cobriu 50 vezes mais do catálogo que eles. A análise também mostrou os limites da abordagem: a qualidade do sistema depende dos metadados, e as listas tendem à superespecialização. Como próximos passos, propõe-se completar as descrições por fonte externa, aplicar MMR, comparar o TF-IDF com embeddings semânticos e avaliar com mais usuários.</p>
+
+<!-- ===================== 8 CONTRIBUIÇÕES ===================== -->
+<h1 id="s8">8 Contribuição de cada membro</h1>
+<p>Cada membro liderou uma frente do trabalho, conforme os papéis sugeridos no guia; todos acompanharam o sistema como um todo.</p>
+<div class="tabela">
+  <table>
+    <thead><tr><th>Membro</th><th class="esq">Papel principal</th><th class="esq">Atividades realizadas</th></tr></thead>
+    <tbody>
+      <tr><td>Danilo Cavalcante</td><td class="esq">Engenharia de dados</td><td class="esq"><span class="preencher">[a preencher]</span></td></tr>
+      <tr><td>Rennan Kauê</td><td class="esq">Modelagem</td><td class="esq"><span class="preencher">[a preencher]</span></td></tr>
+      <tr><td>Thiago Ramon</td><td class="esq">Avaliação</td><td class="esq"><span class="preencher">[a preencher]</span></td></tr>
+      <tr><td>Gabriel Ribeiro</td><td class="esq">Produto e documentação</td><td class="esq"><span class="preencher">[a preencher]</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===================== REFERÊNCIAS ===================== -->
+<section class="referencias">
+<div class="titulo-sem-numero" id="ref" style="margin-top:18pt">Referências</div>
+<p>CARBONELL, J.; GOLDSTEIN, J. The use of MMR, diversity-based reranking for reordering documents and producing summaries. <i>In</i>: ANNUAL INTERNATIONAL ACM SIGIR CONFERENCE ON RESEARCH AND DEVELOPMENT IN INFORMATION RETRIEVAL, 21., 1998, Melbourne. <b>Proceedings</b> [...]. New York: ACM, 1998. p. 335-336.</p>
+<p>CREMONESI, P.; KOREN, Y.; TURRIN, R. Performance of recommender algorithms on top-N recommendation tasks. <i>In</i>: ACM CONFERENCE ON RECOMMENDER SYSTEMS, 4., 2010, Barcelona. <b>Proceedings</b> [...]. New York: ACM, 2010. p. 39-46.</p>
+<p>EFRON, B.; TIBSHIRANI, R. J. <b>An introduction to the bootstrap</b>. New York: Chapman &amp; Hall, 1993.</p>
+<p>JÄRVELIN, K.; KEKÄLÄINEN, J. Cumulated gain-based evaluation of IR techniques. <b>ACM Transactions on Information Systems</b>, New York, v. 20, n. 4, p. 422-446, 2002.</p>
+<p>KOZYRIEV, A. <b>Game recommendations on Steam</b>. [<i>S. l.</i>]: Kaggle, 2023. Conjunto de dados. Disponível em: https://www.kaggle.com/datasets/antonkozyriev/game-recommendations-on-steam. Acesso em: 15 nov. 2026.</p>
+<p>LOPS, P.; DE GEMMIS, M.; SEMERARO, G. Content-based recommender systems: state of the art and trends. <i>In</i>: RICCI, F. <i>et al.</i> (ed.). <b>Recommender systems handbook</b>. Boston: Springer, 2011. p. 73-105.</p>
+<p>MANNING, C. D.; RAGHAVAN, P.; SCHÜTZE, H. <b>Introduction to information retrieval</b>. Cambridge: Cambridge University Press, 2008.</p>
+<p>PAZZANI, M. J.; BILLSUS, D. Content-based recommendation systems. <i>In</i>: BRUSILOVSKY, P.; KOBSA, A.; NEJDL, W. (ed.). <b>The adaptive web</b>. Berlin: Springer, 2007. p. 325-341.</p>
+<p>PORTER, M. F. An algorithm for suffix stripping. <b>Program</b>, [<i>S. l.</i>], v. 14, n. 3, p. 130-137, 1980.</p>
+<p>SALTON, G.; BUCKLEY, C. Term-weighting approaches in automatic text retrieval. <b>Information Processing &amp; Management</b>, [<i>S. l.</i>], v. 24, n. 5, p. 513-523, 1988.</p>
+</section>
+
+</body>
+</html>
