@@ -16,6 +16,10 @@ pandas>=2.2
 # --- Gráficos (análise exploratória e resultados) ---
 matplotlib>=3.8
 
+# --- Notebook de análise exploratória (notebooks/eda.ipynb) ---
+jupyter>=1.0
+nbconvert>=7.0
+
 # --- Testes ---
 pytest>=8.0
 

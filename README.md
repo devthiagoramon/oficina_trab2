@@ -44,6 +44,8 @@ data/raw/
 
 `games.csv` e `games_metadata.json` bastam para o modo manual. `recommendations.csv` é necessário para selecionar usuários reais e fazer a avaliação offline. Os dados brutos não são versionados. O carregador também reconhece os arquivos nas pastas `games_metadata/` e `games.csv/`, como nesta cópia do projeto.
 
+**Análise exploratória:** [notebooks/eda.ipynb](notebooks/eda.ipynb) descreve os três arquivos, os valores ausentes, o efeito de cada filtro, o texto e as tags, os atributos numéricos e as interações, e liga cada achado a uma decisão do sistema. O GitHub mostra o notebook já executado; as figuras ficam em `results/eda/`. Principal achado: ~1.200 jogos sem descrição e sem tags (CS:GO, Dota 2, GTA V...) concentram ~62% das avaliações da base e ficam fora do catálogo.
+
 **Recorte da demonstração:** os 8.000 jogos com mais avaliações em `games.csv` que têm descrição não vazia, excluindo títulos claramente identificados como trilhas sonoras, passes de temporada, DLCs, artbooks, upgrades e servidores dedicados. A escolha é determinística; a ordenação desempata por `app_id`. Na avaliação, os jogos presentes nas interações amostradas são adicionados ao catálogo, inclusive os reservados para teste, se passarem pelos mesmos filtros. Isso usa apenas metadados, sem revelar preferências futuras.
 
 ## Instalação
@@ -96,15 +98,25 @@ Exemplo de `POST /recommendations`:
 4. Calcula o cosseno entre perfil e jogos ainda não avaliados via índice invertido e ordena o Top-N.
 5. Explica cada resultado com tags e palavras de maior contribuição positiva ao cosseno e com o jogo positivo mais parecido. A porcentagem exibida é **similaridade de cosseno**, não probabilidade de gostar.
 
+**Atributos numéricos (variante).** Preço e ano de lançamento podem entrar no mesmo vetor como duas dimensões extras. Valores ausentes recebem a mediana do catálogo. O preço passa por `log(1 + x)`, porque é muito assimétrico, e os dois atributos são padronizados por z-score, limitados a ±3 e multiplicados por um peso. O z-score é centrado, então o cosseno favorece jogos do mesmo lado da média que o perfil; com min-max (tudo positivo), ele favoreceria sempre os mais caros ou mais novos. Nota e número de avaliações não entram, porque vêm de outros usuários. O peso (12) é escolhido por `scripts/escolher_peso.py` numa validação tirada do treino, sem olhar o teste. Essa variante não superou o modelo só com texto no teste (ver [docs/avaliacao.md](docs/avaliacao.md)), por isso o modelo principal usa peso 0. Na interface, a variante é ligada pela opção "Considerar preço e época de lançamento" na barra lateral.
+
 O núcleo está em `backend/app/recommender/`. Não são usadas bibliotecas prontas de NLP/recomendação.
 
 ## Avaliação reproduzível
 
-Após preparar a amostra:
+**Um único comando** refaz tudo: amostra, escolha do peso numérico, as duas avaliações, os exemplos qualitativos, o notebook de análise exploratória e os testes. Os resultados vão para `results/`.
+
+```powershell
+python scripts/reproduzir.py --baixar   # baixa o dataset (~660 MB) se faltar algo em data/raw/
+python scripts/reproduzir.py            # se os dados já estiverem em data/raw/
+```
+
+Leva cerca de 2 minutos depois do download. As etapas também podem ser rodadas separadamente, após preparar a amostra:
 
 ```powershell
 python scripts/run_evaluation.py
 python scripts/run_evaluation.py --split loo
+python scripts/escolher_peso.py
 python -m pytest backend/tests
 ```
 
@@ -121,16 +133,19 @@ backend/app/recommender/   leitura do catálogo, TF-IDF e recomendação
 backend/app/evaluation/    divisão temporal, métricas e baselines
 backend/app/main.py        API FastAPI
 frontend/app.py            interface Streamlit
+notebooks/eda.ipynb        análise exploratória dos dados
 scripts/prepare_data.py    seleção reproduzível de interações
 scripts/run_evaluation.py  tabela de avaliação
 scripts/qualitative_examples.py  exemplos de acerto/erro
+scripts/escolher_peso.py   escolha do peso numérico na validação
+scripts/reproduzir.py      reproduz todos os resultados com um comando
 data/raw/                  dados originais (não versionados)
 data/processed/            amostra de interações (não versionada)
-results/                   métricas geradas
+results/                   métricas geradas; results/eda/ tem as figuras da análise exploratória
 ```
 
 ## Limitações e entrega
 
-O recorte pelos jogos mais avaliados dá menos exposição a títulos pouco conhecidos. A recomendação pode se especializar demais e depende da qualidade das descrições e tags. Um usuário sem jogo positivo precisa escolher ao menos um título. Preço, lançamento e avaliações de terceiros não influenciam a similaridade.
+O recorte pelos jogos mais avaliados dá menos exposição a títulos pouco conhecidos. A recomendação pode se especializar demais e depende da qualidade das descrições e tags. Um usuário sem jogo positivo precisa escolher ao menos um título. No modelo principal, preço e lançamento não influenciam a similaridade (só na variante opcional), e avaliações de terceiros nunca influenciam.
 
 O guia também exige relatório técnico (6–10 páginas), slides em PDF, análise qualitativa de 2–3 usuários e vídeo de demonstração de até três minutos. Esses materiais devem usar a tabela gerada pela avaliação, sem preencher resultados estimados. Prazo: **16/11/2026**.
