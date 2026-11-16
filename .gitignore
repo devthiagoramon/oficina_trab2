@@ -9,3 +9,4 @@ data/processed/*
 games.csv/
 games_metadata/
 recommendations.csv
+docs/relatorio
